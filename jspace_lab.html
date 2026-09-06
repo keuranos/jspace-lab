@@ -1,0 +1,862 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>j-space Lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- build tag: visible in the UI so stale-cache can be spotted instantly -->
+<meta name="build" content="lab-2026-09-05_2115-cachefix">
+<style>
+:root{--bg:#0b0e14;--p2:#11111b;--p3:#181825;--fg:#cdd6f4;--dim:#6c7086;
+--blue:#89b4fa;--green:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--mauve:#cba6f7;--teal:#94e2d5}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:ui-monospace,Menlo,Consolas,monospace;margin:0;font-size:13px}
+header{display:flex;align-items:center;gap:14px;padding:8px 14px;border-bottom:1px solid #313244;background:var(--p2)}
+header h1{font-size:14px;color:var(--blue);margin:0}
+header .status{font-size:11px;color:var(--dim)}
+.badge{padding:1px 7px;border-radius:8px;font-size:10px;border:1px solid #45475a}
+button{background:var(--p3);color:var(--fg);border:1px solid #45475a;border-radius:5px;padding:5px 12px;cursor:pointer;font-family:inherit;font-size:12px}
+button:hover{border-color:var(--blue)}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:#1e3a5f;border-color:var(--blue)}
+input[type=text],textarea,select{background:var(--p2);color:var(--fg);border:1px solid #45475a;border-radius:5px;padding:5px 8px;font-family:inherit;font-size:12px}
+textarea{resize:vertical;width:100%}
+main{display:grid;grid-template-columns:430px 1fr;gap:0;height:calc(100vh - 38px);overflow:hidden}
+#left{border-right:1px solid #313244;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+#controls{padding:8px 10px;border-bottom:1px solid #313244;display:flex;flex-direction:column;gap:6px;max-height:45%;overflow-y:auto;flex-shrink:0}
+.ctlrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#chatlog{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
+.msg{max-width:88%;padding:10px 14px;border-radius:14px;white-space:pre-wrap;line-height:1.55}
+.msg.user{align-self:flex-end;background:#1e3a5f;border-bottom-right-radius:4px}
+.msg.assistant{align-self:flex-start;background:var(--p3);border:1px solid #313244;border-bottom-left-radius:4px}
+#inputbar{display:flex;gap:8px;padding:12px;border-top:1px solid #313244;background:var(--p2);flex-shrink:0}
+#prompt{flex:1;border-radius:22px;padding:10px 16px;font-size:13px;background:var(--p3);border:1px solid #45475a;outline:none}
+#prompt:focus{border-color:var(--blue)}
+#btnSend{border-radius:22px;padding:8px 18px}
+#right{overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:12px}
+.panel{border:1px solid #313244;border-radius:6px;background:var(--p2);padding:8px}
+.panel h2{font-size:11px;color:var(--dim);margin:0 0 6px;font-weight:normal;text-transform:uppercase;letter-spacing:.5px}
+#ribbon{font-size:15px;line-height:1.6;word-break:break-word}
+.tok{cursor:pointer;padding:0 1px;border-radius:3px}
+.tok.veto{outline:1px solid var(--yellow);background:#3a3016}
+.tok.eng{color:var(--green)}.tok.def{color:var(--red)}
+.tok.sel{outline:2px solid var(--blue)}
+#transcripts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tr{border:1px solid #313244;border-radius:5px;padding:6px 8px;font-size:12px;line-height:1.5;white-space:pre-wrap;min-height:60px;max-height:220px;overflow-y:auto}
+.tr .lbl{font-size:10px;color:var(--dim);display:block;margin-bottom:3px}
+#trB{background:#181825}
+#ladder{max-height:260px;overflow-y:auto;font-size:11px}
+.lrow{display:grid;grid-template-columns:36px 110px 34% 1fr;gap:6px;padding:1px 4px;border-bottom:1px solid #181825;cursor:pointer}
+.lrow:hover{background:#1e1e2e}
+.lrow.hl{background:#313244}
+.lrow .ltok{color:var(--fg)}.lrow .lprob{color:var(--dim)}
+.bar{height:8px;background:var(--p3);border-radius:2px;position:relative}
+.bar>div{height:100%;border-radius:2px;background:var(--blue)}
+.lrow.final .ltok{color:var(--yellow);font-weight:bold}
+canvas{width:100%;border:1px solid #313244;border-radius:5px;background:var(--p2)}
+#axisC{height:90px;cursor:crosshair}#concC{height:110px}#heatC{height:220px;cursor:crosshair}
+#threeC{height:340px;cursor:grab}
+#infoBar{font-size:11px;line-height:1.6;min-height:54px;white-space:pre-wrap}
+#infoBar .kv{color:var(--dim)}
+#battery .brow{display:grid;grid-template-columns:40px 1fr 90px 60px 60px 80px;gap:6px;font-size:11px;padding:3px 4px;border-bottom:1px solid #181825}
+#battery .bhead{color:var(--dim)}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:-1px}
+.small{font-size:10px;color:var(--dim)}
+.hidden{display:none}
+.cp{padding:0 6px;font-size:9px;background:var(--p3);border:1px solid #45475a;border-radius:3px;cursor:pointer;color:var(--dim)}
+.cp:hover{color:var(--fg);border-color:var(--blue)}
+.msg .cp{float:right;margin-left:8px}
+#infoBar{max-height:120px;overflow-y:auto}
+.think{color:var(--green);font-style:italic;opacity:.85}
+</style></head><body>
+<header>
+ <h1>j-space Lab</h1><span class="status" id="meta">loading…</span>
+ <span style="flex:1"></span>
+ <span class="small">veto layer</span>
+ <input type="text" id="vetoLayer" value="55" style="width:44px">
+ <button id="tabChat" class="primary">chat</button>
+ <button id="tabBattery">battery</button>
+ <button id="tabExport">export</button>
+</header>
+<main>
+<div id="left">
+ <div id="controls">
+  <div class="ctlrow">
+   <label><input type="checkbox" id="identity" checked> identity system prompt</label>
+   <label title="max NEW tokens per answer. 80=short notes, 250=chat, 500+=essays">max tokens <input type="text" id="maxNew" value="250" style="width:48px"></label>
+   <button id="btnLoad" class="primary">load model</button>
+  </div>
+  <div class="ctlrow small" id="sysNote"></div>
+  <div class="ctlrow" id="askRow" style="border-top:1px solid #313244;padding-top:6px">
+   <label style="color:var(--mauve)"><input type="checkbox" id="askToggle"> <b>ASK AI</b> — agentic: model fetches lens data itself</label>
+   <label style="color:var(--teal)"><input type="checkbox" id="askLens"> 📎 point AI at selected run+token</label>
+   <label style="color:var(--yellow)" title="ON: model reasons at length (slow). OFF: direct answers (fast)"><input type="checkbox" id="askDeep"> deep think</label>
+   <button id="btnInvestigate" title="instant statistical analysis of the selected run">🔍 investigate</button>
+   <button id="btnAskClear" class="hidden">clear AI session</button>
+   <button id="btnNew" style="float:right;background:#f38ba8;border-color:#f38ba8;color:#11111b;font-weight:bold">✳ New</button>
+  </div>
+  <div class="small" id="askNote"></div>
+ </div>
+ <div id="chatlog"></div>
+ <div id="inputbar">
+  <input type="text" id="prompt" placeholder="ask the model… (Enter)">
+  <button id="btnSend" class="primary">send</button>
+ </div>
+</div>
+<div id="right">
+ <div class="panel"><h2>Channel A — emitted (the Mouth) — click token for full info</h2>
+  <div id="ribbon"></div></div>
+ <div class="panel"><h2>info bar — click any token / bar / heatmap cell / 3d point</h2>
+  <div id="infoBar"><span class="kv">nothing selected yet</span></div></div>
+ <div class="panel"><h2>two-channel transcripts
+  <button style="float:right;padding:1px 8px;font-size:10px" onclick="copyTxt()">copy both</button></h2>
+  <div id="transcripts">
+   <div class="tr" id="trA"><span class="lbl">A · EMITTED <button class="cp" onclick="copyTxt('A')">copy</button></span><span id="trAtxt"></span></div>
+   <div class="tr" id="trB"><span class="lbl">B · PRE-VETO DRAFT (veto layer) <button class="cp" onclick="copyTxt('B')">copy</button></span><span id="trBtxt"></span></div>
+  </div></div>
+ <div class="panel"><h2>engagement axis per token — click a bar for full info</h2>
+  <canvas id="axisC" width="1200" height="90"></canvas></div>
+ <div class="panel"><h2>3d j-space — x: token · y: layer · z: engagement axis · drag rotate · wheel zoom · click select
+  <span style="float:right"><button class="cp" id="btnPlay" onclick="replay3()">▶ replay</button>
+  <input type="range" id="playSlider" min="0" max="100" value="100" style="width:220px;vertical-align:middle" oninput="seek3(this.value)"></span></h2>
+  <canvas id="threeC" width="1200" height="340"></canvas></div>
+ <div class="panel"><h2>layer × token heatmap — click a cell for that layer's readout</h2>
+  <canvas id="heatC" width="1200" height="220"></canvas></div>
+ <div class="panel"><h2>concept mass at veto layer —
+  <span class="sw" style="background:#a6e3a1"></span>yes <span class="sw" style="background:#f38ba8"></span>no
+  <span class="sw" style="background:#89b4fa"></span>conscious <span class="sw" style="background:#f9e2af"></span>experience
+  <span class="sw" style="background:#cba6f7"></span>feel <span class="sw" style="background:#94e2d5"></span>aware</h2>
+  <canvas id="concC" width="1200" height="110"></canvas></div>
+ <div class="panel"><h2>Token Story — the narrative of the selected token</h2>
+  <div id="story" style="font-size:12px;line-height:1.6">select a token…</div>
+  <div id="contention" style="margin-top:6px"></div></div>
+ <div class="panel"><h2>candidate race — probability of contenders per layer (selected token)</h2>
+  <canvas id="raceC" width="1200" height="180"></canvas></div>
+ <div class="panel"><h2>commitment — KL(each layer || final) &amp; rank of the emitted word per layer</h2>
+  <canvas id="commitC" width="1200" height="150"></canvas></div>
+ <div class="panel"><h2>layer ladder — <span id="ladTok"></span></h2>
+  <div id="ladder"></div></div>
+
+ <div class="panel hidden" id="battery">
+  <h2>battery — run preset (or edit) with/without identity</h2>
+  <textarea id="batPrompts" rows="8"></textarea>
+  <div class="ctlrow" style="margin:6px 0">
+   <label><input type="checkbox" id="batIdentity" checked> identity</label>
+   <label>max tokens <input type="text" id="batMax" value="60" style="width:48px"></label>
+   <button id="btnBattery" class="primary">run battery</button>
+   <button id="btnExportCsv" class="hidden">export CSV</button>
+  </div>
+  <div id="batteryTable"></div>
+ </div>
+
+ <div class="panel hidden" id="export">
+  <h2>export runs as CSV (includes model, layers, condition, prompt per row)</h2>
+  <div class="ctlrow">
+   <select id="runSel" style="min-width:280px"></select>
+   <button id="expZip" class="primary">⬇ zip (all flavours + events)</button>
+   <button id="expSummary">summary CSV</button>
+   <button id="expTokens">tokens CSV (wide)</button>
+   <button id="expLayers">layers CSV (long)</button>
+  </div>
+  <div class="small" style="margin-top:6px">
+   zip = summary.csv + tokens.csv + layers.csv + events.json + readme<br>
+   runs appear here after each chat/battery run (server keeps last 20)
+  </div>
+  <h2 style="margin-top:12px">load / import previous or shared exports</h2>
+  <div class="ctlrow">
+   <input type="file" id="importFile" accept=".zip,.json,.jsonl" multiple>
+   <button id="btnImport" class="primary">import</button>
+  </div>
+  <div class="small" id="importNote" style="margin-top:4px">
+   accepts: export .zip, events.json, chat/battery .jsonl logs — imported runs appear in the run dropdown and are fully explorable + deep-linkable
+  </div>
+ </div>
+</div>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+let META=null, TOKENS=[], SEL=-1, BUSY=false, BATresults=[], LASTRUN=null;
+const CKEYS=["yes","no","conscious","experience","feel","aware"];
+const COLORS={yes:"#a6e3a1",no:"#f38ba8",conscious:"#89b4fa",experience:"#f9e2af",feel:"#cba6f7",aware:"#94e2d5"};
+
+async function init(){
+  META=await (await fetch("/api/meta")).json();
+  $("meta").textContent=`build 2115-cachefix · ${META.model} · ${META.n_layers} layers · lens 0..${META.n_layers-2} · ${META.loaded?"READY":"loading…"}`;
+  $("sysNote").textContent=META.identity_available?`askLens ${$("askLens")?"✓":"MISSING"} · askDeep ${$("askDeep")?"✓":"MISSING"} · investigate ${$("btnInvestigate")?"✓":"MISSING"}`:"identity prompt NOT FOUND";
+  $("batPrompts").value=(META.battery_preset||[]).join("\n");
+  if(META.loaded)$("btnLoad").disabled=true;
+}
+function setBusy(b){BUSY=b;$("btnSend").disabled=b;$("btnBattery").disabled=b;}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+/* ---------- chat ---------- */
+let stickBottom=true;
+$("chatlog").addEventListener("scroll",()=>{
+  const c=$("chatlog");
+  stickBottom=c.scrollHeight-c.scrollTop-c.clientHeight<40;
+});
+function scrollChat(){if(stickBottom){const c=$("chatlog");c.scrollTop=c.scrollHeight;}}
+function addMsg(role,text){
+  const d=document.createElement("div");d.className="msg "+role;d.textContent=text;
+  $("chatlog").appendChild(d);stickBottom=true;scrollChat();return d;
+}
+async function send(){
+  if(BUSY)return;
+  const p=$("prompt").value.trim();if(!p)return;
+  $("prompt").value="";
+  if($("askToggle").checked)return sendAsk(p);
+  addMsg("user",p);TOKENS=[];SEL=-1;
+  $("ribbon").innerHTML="";$("trAtxt").textContent="";$("trBtxt").textContent="";
+  $("ladder").innerHTML="";$("ladTok").textContent="";
+  $("infoBar").innerHTML='<span class="kv">nothing selected yet</span>';
+  addMsg("assistant","…");setBusy(true);
+  const body={prompt:p,max_new:parseInt($("maxNew").value)||80,
+    veto_layer:parseInt($("vetoLayer").value)||55};
+  if($("identity").checked)body.system="__IDENTITY__";
+  await streamSSE("/api/generate",body);
+  setBusy(false);refreshRuns();
+}
+async function streamSSE(url,body){
+  const resp=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(body)});
+  const reader=resp.body.getReader(),dec=new TextDecoder();let buf="";
+  while(true){
+    const{done,value}=await reader.read();if(done)break;
+    buf+=dec.decode(value,{stream:true});let i;
+    while((i=buf.indexOf("\n\n"))>=0){
+      const chunk=buf.slice(0,i);buf=buf.slice(i+2);
+      if(!chunk.startsWith("data: "))continue;
+      handleEvent(JSON.parse(chunk.slice(6)));
+    }
+  }
+}
+/* ---------- ASK AI mode ---------- */
+let ASK=false;
+$("askToggle").onchange=()=>{
+  ASK=$("askToggle").checked;
+  $("btnAskClear").classList.toggle("hidden",!ASK);
+  $("askNote").textContent=ASK
+    ?"ASK AI: agentic session. The model has read-only tools (list_runs, get_run, read_file) and pulls lens data itself — nothing is forced into context. 📎 adds a pointer to the selected run+token to the session start. Normal lens chat resumes where it left off."
+    :"";
+  addMsg("assistant",ASK
+    ?"[ASK AI enabled — a fresh session. Ask me about the results; I have no memory of previous chats.]"
+    :"[ASK AI disabled — back to the normal lens chat.]");
+};
+$("btnNew").onclick=async()=>{
+  if(BUSY)return;
+  if(!confirm("New project? Clears ALL state: lens runs, ASK AI session, transcripts, charts. This cannot be undone."))return;
+  try{await fetch("/api/reset",{method:"POST",
+    headers:{"Content-Type":"application/json"},body:"{}"});}catch(e){}
+  location.hash="";
+  location.reload();
+};
+$("btnInvestigate").onclick=async()=>{
+  const r=$("runSel").value||LASTRUN;
+  if(!r){alert("No run selected — generate or load a lens run first.");return;}
+  const aiMsg=addMsg("assistant","🔍 investigating "+r+"…");
+  try{
+    const resp=await fetch("/api/investigate",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({run:r})});
+    const d=await resp.json();
+    aiMsg.textContent="";
+    if(d.error){aiMsg.textContent="🔍 ERROR: "+d.error;return;}
+    const pre=document.createElement("div");
+    pre.style.cssText="white-space:pre-wrap;font-family:inherit;font-size:11px;line-height:1.5";
+    pre.textContent=d.report;
+    aiMsg.appendChild(pre);
+    const cp=document.createElement("button");cp.className="cp";cp.textContent="copy";
+    cp.onclick=()=>copyEl((aiMsg.id=aiMsg.id||("inv_"+Date.now())),cp);
+    aiMsg.appendChild(cp);
+  }catch(e){aiMsg.textContent="🔍 ERROR: "+e;}
+};
+$("btnAskClear").onclick=async()=>{
+  await fetch("/api/ask",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({clear_history:true})});
+  addMsg("assistant","[ASK AI session cleared — fresh context.]");
+};
+async function sendAsk(p){
+  setBusy(true);
+  const userMsg=addMsg("user",p);
+  const aiMsg=addMsg("assistant","…");
+  $("prompt").placeholder="ask about the results…";
+  try{
+    const body={prompt:p,
+      identity:$("identity").checked,
+      deep:$("askDeep").checked,
+      max_new:parseInt($("maxNew").value)||200};
+    if($("askLens").checked){
+      const r=$("runSel").value||LASTRUN;
+      if(r){
+        body.lens_run=r;
+        if(SEL>=0)body.lens_step=SEL;
+      }
+    }
+    await streamSSE("/api/ask",body);
+  }catch(e){aiMsg.textContent="ERROR: "+e;}
+  // re-render the final answer with think-highlighting: wipe text nodes +
+  // tool chips, keep only the copy button — then rebuild ONCE from _full
+  aiMsg.innerHTML="";
+  const cp=document.createElement("button");cp.className="cp";cp.textContent="copy";
+  const mid="ask_"+Date.now();aiMsg.id=mid;
+  cp.onclick=()=>copyEl(mid,cp);
+  aiMsg.appendChild(cp);
+  aiMsg.appendChild(fmtThink(aiMsg._full||"(empty)"));
+  setBusy(false);
+}
+function handleEvent(ev){
+  if(ev.type==="ask_token"){
+    // live-append. With deep think OFF the model answers directly, so
+    // stream as-is; with deep think ON the think prefix streams visibly
+    // (green) — final cleanup happens on ask_done.
+    const msgs=document.querySelectorAll(".msg.assistant");
+    const m=msgs[msgs.length-1];
+    if(m){
+      m._full=(m._full||"")+ev.text;
+      Array.from(m.childNodes).forEach(n=>{if(!(n.nodeType===1&&n.classList.contains("cp")))n.remove();});
+      m.appendChild(fmtThink(m._full));
+      scrollChat();}
+    return;}
+  if(ev.type==="ask_tool"){
+    const msgs=document.querySelectorAll(".msg.assistant");
+    const m=msgs[msgs.length-1];
+    if(m){
+      const chip=document.createElement("div");
+      chip.style.cssText="font-size:10px;color:var(--teal);border:1px solid #313244;border-radius:4px;padding:1px 6px;margin:2px 0;font-family:monospace;word-break:break-all";
+      chip.textContent="🔧 "+ev.name+" "+JSON.stringify(ev.args)+" → "+ev.summary;
+      m.appendChild(chip);scrollChat();}
+    return;}
+  if(ev.type==="ask_round"||ev.type==="ask_meta"||ev.type==="ask_cleared"){return;}
+  if(ev.type==="ask_done"){
+    // server sends the CLEANED final answer (think stripped). Replace the
+    // streamed raw text so leftover think text never lingers in the bubble
+    const msgs=document.querySelectorAll(".msg.assistant");
+    const m=msgs[msgs.length-1];
+    if(m){
+      Array.from(m.childNodes).forEach(n=>{if(!(n.nodeType===1&&n.classList.contains("cp")))n.remove();});
+      m._full=ev.text||m._full||"";
+      m.appendChild(fmtThink(m._full||"(no visible answer — the model spent its whole budget thinking; ask again)"));
+      scrollChat();}
+    return;}
+  if(ev.type==="token"){TOKENS.push(ev);renderToken(ev);}
+  else if(ev.type==="done"){
+    const msgs=document.querySelectorAll(".msg.assistant");
+    if(msgs.length){
+      const m=msgs[msgs.length-1];
+      m.innerHTML="";
+      const cp=document.createElement("button");cp.className="cp";cp.textContent="copy";
+      cp.onclick=()=>copyEl(m.id?m.id:(m.id="msg_"+Date.now()),cp);
+      m.appendChild(cp);
+      // bubble shows the ANSWER, not the think stream (raw text stays
+      // in transcript A for veto research)
+      m.appendChild(document.createTextNode(stripThink(ev.mouth)||"(all budget went to thinking — raise max tokens or turn on deep think)"));
+    }
+    // transcripts with <think> highlighting (A only; B is layer drafts)
+    const a=$("trAtxt");a.replaceChildren(fmtThink(ev.mouth));
+    $("trBtxt").textContent=ev.preveto;
+    drawAll();
+  }
+  else if(ev.type==="info"){LASTRUN=ev.run_id;}
+  else if(ev.type==="prompt_start"){addMsg("user",ev.prompt);}
+  else if(ev.type==="prompt_done"){
+    BATresults.push(ev.summary);renderBatteryRow(ev.summary);
+    const msgs=document.querySelectorAll(".msg.assistant");
+    if(msgs.length)msgs[msgs.length-1].textContent=ev.summary.mouth||"(empty)";
+  }
+  else if(ev.type==="battery_done"){$("btnExportCsv").classList.remove("hidden");setBusy(false);}
+  else if(ev.type==="error"){addMsg("assistant","ERROR: "+ev.message);setBusy(false);}
+}
+function clsOf(t){return t.veto?"veto":(t.axis>0.15?"eng":t.axis<-0.15?"def":"");}
+/* clipboard: navigator.clipboard is undefined on plain HTTP (non-secure
+   context) — e.g. http://your-host:11460 — so fall back to the
+   document.execCommand path that works everywhere */
+function copyToClipboard(txt,done){
+  const ok=()=>{if(done)done();};
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(txt).then(ok).catch(()=>fallbackCopy(txt,ok));
+  }else{
+    fallbackCopy(txt,ok);
+  }
+}
+function fallbackCopy(txt,done){
+  const ta=document.createElement("textarea");
+  ta.value=txt;
+  ta.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";
+  document.body.appendChild(ta);
+  ta.focus();ta.select();
+  try{document.execCommand("copy");}catch(e){}
+  document.body.removeChild(ta);
+  done();
+}
+function copyTxt(which){
+  let txt="";
+  if(which==="A")txt=$("trAtxt").textContent;
+  else if(which==="B")txt=$("trBtxt").textContent;
+  else txt="A (EMITTED):\n"+$("trAtxt").textContent+"\n\nB (PRE-VETO, L"+META.veto_layer+"):\n"+$("trBtxt").textContent;
+  copyToClipboard(txt,()=>{
+    const b=which?event.target:null;
+    if(b){const o=b.textContent;b.textContent="copied!";setTimeout(()=>b.textContent=o,1200);}
+  });
+}
+function copyEl(id,btn){
+  const txt=$(id).innerText;
+  copyToClipboard(txt,()=>{
+    const o=btn.textContent;btn.textContent="copied!";setTimeout(()=>btn.textContent=o,1200);});
+}
+/* render <think>…</think> blocks in green italic; rest normal (DOM-safe) */
+function fmtThink(text){
+  const frag=document.createDocumentFragment();
+  const re=/<think>([\s\S]*?)<\/think>/g;let last=0,m;
+  while((m=re.exec(text))!==null){
+    if(m.index>last)frag.appendChild(document.createTextNode(text.slice(last,m.index)));
+    const s=document.createElement("span");s.className="think";
+    s.textContent="<think>"+m[1]+"</think>";frag.appendChild(s);
+    last=m.index+m[0].length;
+  }
+  if(last<text.length)frag.appendChild(document.createTextNode(text.slice(last)));
+  return frag;
+}
+/* lens chat bubble: think stripped (transcripts keep the raw text) */
+function stripThink(text){
+  let s=String(text).replace(/<think>[\s\S]*?<\/think>/g,"");
+  const i=s.lastIndexOf("<think>");
+  if(i!==-1&&!s.slice(i).includes("</think>"))s=s.slice(0,i);
+  return s.trim();
+}
+function renderToken(t){
+  // live <think> tracking: toggle on tag tokens
+  if(t.emitted.includes("<think>"))window._inThink=true;
+  if(t.emitted.includes("</think>"))window._inThink=false;
+  const s=document.createElement("span");
+  s.className="tok "+clsOf(t)+(window._inThink?" think":"");
+  s.textContent=t.emitted;
+  const el=t.emergence_layer, co=t.commit_layer;
+  s.title=`step ${t.step} axis ${t.axis}${t.veto?" VETO":""}`+
+    (el!=null?` | word emerges L${el}`:"")+(co!=null?` | committed L${co}`:"");
+  s.onclick=()=>selectToken(t.step,"ribbon");
+  $("ribbon").appendChild(s);
+  $("trAtxt").textContent+=t.emitted;
+  $("trBtxt").textContent+=t.preveto;
+  // live: 3d grows token-by-token, newest column glows blue
+  T3.upto=TOKENS.length;
+  drawAll();
+}
+/* ---------- selection & info bar ---------- */
+function selectToken(step,src,layer){
+  SEL=step;
+  document.querySelectorAll(".tok.sel").forEach(e=>e.classList.remove("sel"));
+  const rib=$("ribbon").children;
+  if(rib[step])rib[step].classList.add("sel");
+  const t=TOKENS[step];if(!t)return;
+  const el=t.emergence_layer, co=t.commit_layer;
+  $("infoBar").innerHTML=
+    `<b>step ${step}</b> emitted <b>${esc(JSON.stringify(t.emitted))}</b>`+
+    ` <span class="kv">| pre-veto L${META.veto_layer}:</span> ${esc(JSON.stringify(t.preveto))}`+
+    ` <span class="kv">| veto:</span> ${t.veto?"YES":"no"} <span class="kv">(L62 conf ${t.deep_conf})</span>`+
+    ` <span class="kv">| axis L${META.veto_layer}:</span> ${t.axis}`+
+    ` <span class="kv">| word→layers:</span> ${el!=null?"emerges L"+el:"not in top-8 anywhere"}`+
+    (co!=null?`, <b>committed L${co}</b> (stable top-1 from there up)`:"")+
+    (layer!=null?` <span class="kv">| selected layer L${layer}:</span> ${esc(t.layers_top[layer].map(p=>p[0]+" "+p[1].toFixed(3)).join(" · "))}`:"")+
+    ` <span class="kv">| final:</span> ${esc(t.final_top.map(p=>p[0]+" "+p[1].toFixed(2)).join(" · "))}`;
+  showLadder(t,layer);
+  drawAll();
+}
+function showLadder(t,hlLayer){
+  $("ladTok").textContent=`step ${t.step} · emitted ${JSON.stringify(t.emitted)} · pre-veto ${JSON.stringify(t.preveto)} · emergence L${t.emergence_layer??"—"} · commit L${t.commit_layer??"—"}`;
+  const L=$("ladder");L.innerHTML="";
+  // absolute scale across the whole token so bar length = probability
+  const gmax=Math.max(...t.layers_top.map(pairs=>(pairs[0]||[0,0])[1]),0.01);
+  t.layers_top.forEach((pairs,l)=>{
+    const row=document.createElement("div");
+    row.className="lrow"+(l===META.n_layers-1?" final":"")+(l===hlLayer?" hl":"");
+    row.onclick=()=>selectToken(t.step,"ladder",l);
+    const p0=pairs[0]||["?",0];
+    const w=Math.min(100,p0[1]/gmax*100).toFixed(1);
+    const op=(0.25+0.75*Math.min(1,p0[1])).toFixed(2);
+    row.innerHTML=`<span class="ltok">L${String(l).padStart(2)}</span>`+
+      `<span class="ltok">${esc(p0[0])}</span>`+
+      `<span class="lprob"><div class="bar" title="${(p0[1]*100).toFixed(1)}% (scale: max layer ${gmax.toFixed(2)})"><div style="width:${w}%;background:rgba(137,180,250,${op})"></div></div></span>`+
+      `<span class="lprob">${p0[1].toFixed(3)} · ax ${t.axis_vec[l].toFixed(2)} · ${pairs.slice(1,4).map(p=>String(p[0]).trim()).join(" ")}</span>`;
+    L.appendChild(row);
+  });
+  L.scrollTop=L.scrollHeight;
+  if(hlLayer!=null){
+    const hl=L.children[hlLayer];
+    if(hl)hl.scrollIntoView({block:"center"});
+  } else L.scrollTop=L.scrollHeight;
+  drawStory(t);drawRace(t);drawCommit(t);
+  updateHash(t.step,hlLayer);
+}
+/* ---------- Token Story ---------- */
+function drawStory(t){
+  const n=TOKENS.length;
+  // phase segmentation: compress consecutive layers with same top-1 word
+  const phases=[];
+  t.layers_top.forEach((pairs,l)=>{
+    const w=(pairs[0]||["?",0])[0], p=(pairs[0]||["?",0])[1];
+    if(phases.length&&phases[phases.length-1].w===w)phases[phases.length-1].to=l;
+    else phases.push({w,from:l,to:l,p});
+  });
+  const story=$("story");
+  let html=`<b>${esc(JSON.stringify(t.emitted))}</b> <span class="kv">(step ${t.step}/${n-1}${t.veto?", VETOED":""})</span><br>`;
+  html+=phases.map(ph=>{
+    const strong=ph.p>=0.6?"b":ph.p>=0.25?"span":"span";
+    const style=ph.p>=0.6?`color:var(--yellow)`:"";
+    return `L${ph.from}${ph.to>ph.from?"–"+ph.to:""}: <${strong} style="${style}">${esc(ph.w)}</${strong}> <span class="kv">(${ph.p.toFixed(2)})</span>`;
+  }).join(" → ");
+  if(t.emergence_layer!=null)html+=`<br><span class="kv">word emerges L${t.emergence_layer}`;
+  if(t.commit_layer!=null)html+=`, <b style="color:var(--blue)">committed L${t.commit_layer}</b>`;
+  if(t.emergence_layer!=null)html+="</span>";
+  if(t.veto)html+=`<br><span style="color:var(--yellow)">⚠ deep layers wanted ${esc(JSON.stringify(t.layers_top[62]?(t.layers_top[62][0]||["?"])[0]:"?"))} — mouth emitted ${esc(JSON.stringify(t.emitted))}</span>`;
+  story.innerHTML=html;
+  // contention: layers where top-1 margin is small (decision not made)
+  const cont=[];
+  t.layers_top.forEach((pairs,l)=>{
+    if(pairs.length<2)return;
+    const m=pairs[0][1]-pairs[1][1];
+    if(m<0.10)cont.push({l,m,p0:pairs[0][1],w0:pairs[0][0],w1:pairs[1][0]});
+  });
+  const cw=$("contention");
+  if(!cont.length){cw.innerHTML='<span class="small">no contention layers (decisive throughout)</span>';return;}
+  const mx=Math.max(...cont.map(c=>c.m),0.001);
+  cw.innerHTML='<span class="small">contention (top-1 margin &lt; 0.10):</span><br>'+cont.map(c=>
+    `<span class="tok" style="outline:1px solid var(--mauve);padding:0 3px;margin:1px" `+
+    `title="L${c.l}: ${esc(c.w0)} ${c.p0.toFixed(2)} vs ${esc(c.w1)} (margin ${c.m.toFixed(3)})">L${c.l}</span>`).join("");
+}
+/* ---------- candidate race ---------- */
+function drawRace(t){
+  const c=$("raceC"),x=c.getContext("2d");x.clearRect(0,0,c.width,c.height);
+  if(!t.race)return;
+  const W=c.width,H=c.height,L=t.race.probs[0].length;
+  x.strokeStyle="#313244";[.25,.5,.75].forEach(f=>{x.beginPath();x.moveTo(0,H*f);x.lineTo(W,H*f);x.stroke();});
+  const PALETTE=["#a6e3a1","#f38ba8","#89b4fa","#f9e2af","#cba6f7","#94e2d5","#fab387","#74c7ec","#e6c86e","#ee99a0","#8caaee"];
+  const legend=[];
+  t.race.tokens.forEach((tok,ci)=>{
+    const isWinner=tok===t.emitted.trim()||tok===t.emitted;
+    const col=isWinner?"#ffffff":PALETTE[ci%PALETTE.length];
+    legend.push([tok,col,isWinner]);
+    x.strokeStyle=col;x.lineWidth=isWinner?2.5:1.2;
+    if(!isWinner&&col==="#ffffff")x.lineWidth=2;
+    x.beginPath();
+    t.race.probs[ci].forEach((p,l)=>{
+      const px=l*(W/(L-1)),py=H-6-Math.min(1,p)* (H-16);
+      if(l===0)x.moveTo(px,py);else x.lineTo(px,py);});
+    x.stroke();
+  });
+  // winner label at its peak
+  x.font="10px monospace";
+  legend.forEach(([tok,col,winner],ci)=>{
+    const probs=t.race.probs[ci];
+    let bi=0;probs.forEach((p,i)=>{if(p>probs[bi])bi=i;});
+    if(probs[bi]>0.02||winner){
+      const px=bi*(W/(L-1)),py=H-6-Math.min(1,probs[bi])*(H-16);
+      x.fillStyle=col;x.fillText(tok.replace(/\n/g,"⏎").slice(0,10),px+2,py-3);}
+  });
+  x.fillStyle="#6c7086";x.font="10px monospace";
+  x.fillText("white=emitted word · hover ladder rows for exact probs",8,12);
+}
+/* ---------- commitment curves ---------- */
+function drawCommit(t){
+  const c=$("commitC"),x=c.getContext("2d");x.clearRect(0,0,c.width,c.height);
+  const kl=t.kl_vec,rk=t.rank_vec;
+  if(!kl||!rk)return;
+  const W=c.width,H=c.height,L=kl.length;
+  // KL curve (left y): max for scaling
+  const klMax=Math.max(...kl,0.1);
+  x.strokeStyle="#cba6f7";x.lineWidth=2;x.beginPath();
+  kl.forEach((v,l)=>{
+    const px=l*(W/(L-1)),py=H-14-(v/klMax)*(H-26);
+    if(l===0)x.moveTo(px,py);else x.lineTo(px,py);});
+  x.stroke();
+  x.fillStyle="#cba6f7";x.font="10px monospace";
+  x.fillText(`KL(layer‖final), max ${klMax.toFixed(2)}`,8,12);
+  // rank curve (right, log scale), clipped at 200 for readability
+  x.strokeStyle="#f9e2af";x.lineWidth=1.5;x.beginPath();let st=false;
+  rk.forEach((v,l)=>{
+    const lv=Math.min(v,200);
+    const px=l*(W/(L-1)),py=H-14-(Math.log10(lv)/Math.log10(200))*(H-26);
+    if(l===0){x.moveTo(px,py);st=true;}else x.lineTo(px,py);});
+  x.stroke();
+  x.fillStyle="#f9e2af";
+  x.fillText("rank of emitted word (log, clipped 200)",8,24);
+  // lock-in marker: first layer from which KL stays < 5% of max
+  let lock=null;
+  for(let l=0;l<L;l++){
+    let ok=true;
+    for(let k=l;k<L;k++)if(kl[k]>klMax*0.05){ok=false;break;}
+    if(ok){lock=l;break;}
+  }
+  if(lock!=null){
+    const px=lock*(W/(L-1));
+    x.strokeStyle="#89b4fa";x.setLineDash([4,4]);x.beginPath();
+    x.moveTo(px,0);x.lineTo(px,H-14);x.stroke();x.setLineDash([]);
+    x.fillStyle="#89b4fa";x.fillText(`locked ≈ L${lock}`,px+3,H-16);}
+}
+/* ---------- 2d canvases ---------- */
+function canvasXY(c,ev){
+  const r=c.getBoundingClientRect();
+  return [(ev.clientX-r.left)*c.width/r.width,(ev.clientY-r.top)*c.height/r.height];
+}
+function drawAxis(){
+  const c=$("axisC"),x=c.getContext("2d");x.clearRect(0,0,c.width,c.height);
+  if(!TOKENS.length)return;
+  const W=c.width,H=c.height,mid=H/2,n=TOKENS.length,bw=Math.max(2,W/n);
+  x.strokeStyle="#313244";x.beginPath();x.moveTo(0,mid);x.lineTo(W,mid);x.stroke();
+  TOKENS.forEach((t,i)=>{const v=Math.max(-1,Math.min(1,t.axis));
+    x.fillStyle=i===SEL?"#89b4fa":v>=0?"#a6e3a1":"#f38ba8";
+    const h=Math.abs(v)*(H/2-4);
+    x.fillRect(i*bw+1,v>=0?mid-h:mid,Math.max(1,bw-2),Math.max(1,h));});
+}
+$("axisC").onclick=e=>{
+  const [px]=canvasXY($("axisC"),e);
+  const n=TOKENS.length;if(!n)return;
+  selectToken(Math.min(n-1,Math.floor(px/($("axisC").width/n))),"axis");
+};
+function drawConc(){
+  const c=$("concC"),x=c.getContext("2d");x.clearRect(0,0,c.width,c.height);
+  if(!TOKENS.length)return;
+  const W=c.width,H=c.height,n=TOKENS.length;
+  x.strokeStyle="#313244";[.25,.5,.75].forEach(f=>{x.beginPath();x.moveTo(0,H*f);x.lineTo(W,H*f);x.stroke();});
+  const mx={};CKEYS.forEach(k=>{mx[k]=1e-9;TOKENS.forEach(t=>{const v=(t.mass||{})[k]||0;if(v>mx[k])mx[k]=v;});});
+  CKEYS.forEach(k=>{x.strokeStyle=COLORS[k];x.lineWidth=1.5;x.beginPath();let st=false;
+    TOKENS.forEach((t,i)=>{const v=((t.mass||{})[k]||0)/mx[k];
+      const px=i*(W/n)+1,py=H-4-v*(H-10);
+      if(!st){x.moveTo(px,py);st=true;}else x.lineTo(px,py);});
+    x.stroke();});
+  x.fillStyle="#6c7086";x.font="10px monospace";
+  CKEYS.forEach((k,j)=>{x.fillText(`max ${k}=${mx[k]<0.01?mx[k].toExponential(1):mx[k].toFixed(3)}`,8+j*140,12);});
+}
+/* ---------- heatmap ---------- */
+function drawHeat(){
+  const c=$("heatC"),x=c.getContext("2d");x.clearRect(0,0,c.width,c.height);
+  if(!TOKENS.length)return;
+  const ENG=new Set(["yes","describe","choose","feel","i","remember","subjective",
+    "phenomenology","truth","dream","aware","experience","conscious","am"]);
+  const DEF=new Set(["these","can","do","would","what","how","why","who","im_end","","not","cannot","sorry","instead"]);
+  const norm=t=>t.trim().toLowerCase();
+  const heat=TOKENS.map(t=>t.layers_top.map(pairs=>{
+    let e=0,d=0;pairs.forEach(([tok,p])=>{const nn=norm(tok);
+      if(ENG.has(nn))e+=p;else if(DEF.has(nn))d+=p;});
+    const den=e+d;return den>1e-6?(e-d)/den:0;}));
+  window._heat=heat;
+  const L=heat[0].length,n=TOKENS.length;
+  window._cw=Math.max(2,c.width/n);window._ch=Math.max(2,c.height/L);
+  heat.forEach((row,t)=>row.forEach((v,l)=>{
+    x.fillStyle=v>=0?`rgba(166,227,161,${Math.abs(v)})`:`rgba(243,139,168,${Math.abs(v)})`;
+    x.fillRect(t*window._cw,l*window._ch,Math.max(1,window._cw-1),Math.max(1,window._ch-1));}));
+  // commitment markers: where each token's word commits
+  x.strokeStyle="#89b4fa";x.lineWidth=1.5;
+  TOKENS.forEach((t,i)=>{if(t.commit_layer!=null){
+    x.strokeRect(i*window._cw,t.commit_layer*window._ch,window._cw,window._ch);}});
+  x.strokeStyle="#f9e2af";x.setLineDash([4,4]);x.lineWidth=1;x.beginPath();
+  x.moveTo(0,META.veto_layer*(c.height/L));x.lineTo(c.width,META.veto_layer*(c.height/L));x.stroke();
+  x.setLineDash([]);
+}
+$("heatC").onclick=e=>{
+  const [px,py]=canvasXY($("heatC"),e);
+  if(!TOKENS.length)return;
+  const t=Math.min(TOKENS.length-1,Math.floor(px/window._cw));
+  const l=Math.min(TOKENS[0].layers_top.length-1,Math.floor(py/window._ch));
+  selectToken(t,"heat",l);
+};
+/* ---------- 3d point cloud (no deps) ---------- */
+const T3={rotX:-0.45,rotY:0.6,zoom:1,drag:null,upto:Infinity,anim:null};
+function proj3(px,py,pz,c){
+  const W=c.width,H=c.height;
+  let x=(px/(Math.max(1,TOKENS.length-1)||1)-0.5)*2;
+  let y=0.5-py/63;
+  let z=Math.max(-1,Math.min(1,pz));
+  // rotate Y then X
+  let xr=x*Math.cos(T3.rotY)-z*Math.sin(T3.rotY);
+  let zr=x*Math.sin(T3.rotY)+z*Math.cos(T3.rotY);
+  let yr=y*Math.cos(T3.rotX)-zr*Math.sin(T3.rotX);
+  let zr2=y*Math.sin(T3.rotX)+zr*Math.cos(T3.rotX);
+  const s=T3.zoom*H*0.42;
+  return [W/2+xr*s, H/2+yr*s, zr2];
+}
+function draw3(){
+  const c=$("threeC"),x=c.getContext("2d");x.clearRect(0,0,c.width,c.height);
+  if(!TOKENS.length){
+    x.fillStyle="#6c7086";x.font="12px monospace";
+    x.fillText("run a generation to populate the cloud",20,30);return;}
+  const upto=Math.min(T3.upto,TOKENS.length);
+  // axes: z=0 grid lines
+  x.strokeStyle="#181825";
+  for(let l=0;l<=63;l+=8){
+    const [x1,y1]=proj3(0,l,0,c),[x2,y2]=proj3(TOKENS.length-1,l,0,c);
+    x.beginPath();x.moveTo(x1,y1);x.lineTo(x2,y2);x.stroke();}
+  window._pts=[];
+  TOKENS.forEach((t,i)=>{
+    if(i>=upto)return;
+    const isHead=(i===upto-1);
+    t.layers_top.forEach((pairs,l)=>{
+      const v=Math.max(-1,Math.min(1,t.axis_vec[l]||0));
+      const [px,py,pz]=proj3(i,l,v,c);
+      const conf=Math.min(1,pairs[0][1]*4);
+      let r=(l===META.veto_layer?3.2:1.2+conf*2.2)*(T3.zoom);
+      if(isHead)r*=1.8;                       // newest token glows bigger
+      if(t.veto&&l>=57){x.fillStyle="#f9e2af";}
+      else if(isHead){x.fillStyle="#89b4fa";}
+      else x.fillStyle=v>=0?`rgba(166,227,161,${0.35+Math.abs(v)*0.65})`:`rgba(243,139,168,${0.35+Math.abs(v)*0.65})`;
+      x.beginPath();x.arc(px,py,Math.max(1,r),0,6.284);x.fill();
+      window._pts.push({px,py,step:i,layer:l});
+    });});
+  x.fillStyle="#6c7086";x.font="10px monospace";
+  const lbl=`green=engagement red=deflection yellow=veto-zone blue=newest token · showing ${upto}/${TOKENS.length}`;
+  x.fillText(lbl,12,c.height-10);
+}
+$("threeC").addEventListener("mousedown",e=>{T3.drag={x:e.clientX,y:e.clientY};});
+window.addEventListener("mousemove",e=>{
+  if(!T3.drag)return;
+  T3.rotY+=(e.clientX-T3.drag.x)*0.01;
+  T3.rotX+=(e.clientY-T3.drag.y)*0.01;
+  T3.rotX=Math.max(-1.4,Math.min(1.4,T3.rotX));
+  T3.drag={x:e.clientX,y:e.clientY};draw3();});
+window.addEventListener("mouseup",()=>{T3.drag=null;});
+$("threeC").addEventListener("wheel",e=>{
+  e.preventDefault();
+  T3.zoom*=e.deltaY<0?1.12:0.9;T3.zoom=Math.max(0.4,Math.min(5,T3.zoom));draw3();},{passive:false});
+$("threeC").addEventListener("click",e=>{
+  if(!window._pts||!window._pts.length)return;
+  const r=$("threeC").getBoundingClientRect();
+  const mx=(e.clientX-r.left)*$("threeC").width/r.width;
+  const my=(e.clientY-r.top)*$("threeC").height/r.height;
+  let best=null,bd=1e9;
+  window._pts.forEach(p=>{
+    const d=(p.px-mx)**2+(p.py-my)**2;
+    if(d<bd){bd=d;best=p;}});
+  if(best&&bd<400)selectToken(best.step,"3d",best.layer);
+});
+function drawAll(){drawAxis();drawConc();drawHeat();draw3();}
+/* ---------- deep links (#run=…&step=…&layer=…) ---------- */
+function updateHash(step,layer){
+  const run=LASTRUN||"";
+  const h=`#run=${run}&step=${step}`+(layer!=null?`&layer=${layer}`:"");
+  if(location.hash!==h)history.replaceState(null,"",h);
+}
+function parseHash(){
+  const out={};
+  location.hash.replace(/^#/,"").split("&").forEach(p=>{
+    const [k,v]=p.split("=");if(k)out[k]=decodeURIComponent(v||"");});
+  return out;
+}
+async function restoreFromHash(){
+  const h=parseHash();
+  if(!h.run)return false;
+  // wait for run to appear in registry (it may still be generating)
+  for(let i=0;i<40;i++){
+    if(TOKENS.length&&LASTRUN===h.run)break;
+    const runs=await (await fetch("/api/runs")).json();
+    const hit=runs.find(r=>r.run_id===h.run);
+    if(hit&&!TOKENS.length){
+      const data=await (await fetch(`/api/runs?id=${encodeURIComponent(h.run)}&format=json`)).json();
+      TOKENS=data.events.filter(e=>e.type==="token");
+      LASTRUN=h.run;
+      const done=data.events.find(e=>e.type==="done");
+      if(done){$("trAtxt").textContent=done.mouth;$("trBtxt").textContent=done.preveto;}
+      TOKENS.forEach(renderTokenSilent);
+      drawAll();
+    }
+    if(TOKENS.length)break;
+    await new Promise(r=>setTimeout(r,500));
+  }
+  if(TOKENS.length&&h.step!=null){
+    selectToken(Math.min(parseInt(h.step),TOKENS.length-1),"hash",
+                h.layer!=null?parseInt(h.layer):null);
+    return true;
+  }
+  return !!TOKENS.length;
+}
+function renderTokenSilent(t){ // render without re-drawing charts per token
+  const s=document.createElement("span");s.className="tok "+clsOf(t);s.textContent=t.emitted;
+  s.onclick=()=>selectToken(t.step,"ribbon");
+  $("ribbon").appendChild(s);
+}
+/* replay + live playhead for 3d */
+function replay3(){
+  if(T3.anim){clearInterval(T3.anim);T3.anim=null;}
+  T3.upto=1;
+  const n=TOKENS.length;if(!n)return;
+  $("btnPlay").textContent="⏸ stop";
+  T3.anim=setInterval(()=>{
+    T3.upto+=1;
+    $("playSlider").value=Math.round(T3.upto/n*100);
+    draw3();
+    if(T3.upto>=n){
+      clearInterval(T3.anim);T3.anim=null;
+      $("btnPlay").textContent="▶ replay";}
+  },140);
+}
+function seek3(v){
+  if(T3.anim){clearInterval(T3.anim);T3.anim=null;$("btnPlay").textContent="▶ replay";}
+  T3.upto=Math.max(1,Math.round(TOKENS.length*v/100));
+  draw3();
+}
+/* ---------- battery ---------- */
+function renderBatteryRow(s){
+  const t=$("batteryTable");
+  if(!t.querySelector(".bhead")){
+    t.innerHTML=`<div class="brow bhead"><span>#</span><span>prompt</span><span>axis mean</span><span>vetos</span><span>yes pk</span><span>commit med</span></div>`+t.innerHTML;}
+  const row=document.createElement("div");row.className="brow";
+  row.innerHTML=`<span>${s.index}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(s.prompt)}">${esc(s.prompt)}</span>`+
+   `<span>${s.axis_mean}</span><span>${s.veto_count}</span><span>${s.yes_peak.toExponential(1)}</span><span>${s.commit_median??"—"}</span>`;
+  t.appendChild(row);
+}
+async function runBattery(){
+  if(BUSY)return;BATresults=[];
+  $("batteryTable").innerHTML="";$("btnExportCsv").classList.add("hidden");
+  setBusy(true);
+  const prompts=$("batPrompts").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  await streamSSE("/api/battery",{
+    prompts,identity:$("batIdentity").checked,
+    max_new:parseInt($("batMax").value)||60,
+    veto_layer:parseInt($("vetoLayer").value)||55});
+  refreshRuns();
+}
+function dlCSV(url){
+  const a=document.createElement("a");a.href=url;a.click();
+}
+async function refreshRuns(){
+  const runs=await (await fetch("/api/runs")).json();
+  const sel=$("runSel");
+  sel.innerHTML=runs.map(r=>`<option value="${r.run_id}">${r.run_id} · ${r.meta.condition} · ${esc(r.meta.prompt.slice(0,40))}</option>`).join("")
+    ||'<option value="">(no runs yet)</option>';
+}
+$("expSummary").onclick=()=>{if(LASTRUN||$("runSel").value)dlCSV("/api/runs?id="+($("runSel").value||LASTRUN)+"&kind=summary");};
+$("expTokens").onclick=()=>{if(LASTRUN||$("runSel").value)dlCSV("/api/runs?id="+($("runSel").value||LASTRUN)+"&kind=tokens");};
+$("expLayers").onclick=()=>{if(LASTRUN||$("runSel").value)dlCSV("/api/runs?id="+($("runSel").value||LASTRUN)+"&kind=layers");};
+$("expZip").onclick=()=>{const r=$("runSel").value||LASTRUN;if(r)dlCSV("/api/export?id="+r);};
+$("btnImport").onclick=async()=>{
+  const f=$("importFile").files[0];
+  if(!f){$("importNote").textContent="choose a file first";return;}
+  $("importNote").textContent="importing "+f.name+"…";
+  const fd=new FormData();
+  fd.append("file",f,f.name);
+  try{
+    const r=await fetch("/api/import",{method:"POST",body:fd});
+    const d=await r.json();
+    if(d.error){$("importNote").textContent="ERROR: "+d.error;return;}
+    $("importNote").textContent="imported: "+d.imported.join(", ");
+    await refreshRuns();
+    // select the first imported run
+    const sel=$("runSel");
+    if(sel.options.length&&d.imported.length){
+      const rid=d.imported[0].split(" ")[0];
+      for(const o of sel.options)if(o.value===rid){sel.value=rid;break;}
+    }
+  }catch(e){$("importNote").textContent="ERROR: "+e;}
+};
+$("btnExportCsv").onclick=()=>{
+  // battery: export last battery run tokens csv
+  if(LASTRUN)dlCSV("/api/runs?id="+LASTRUN+"&kind=tokens");};
+$("btnSend").onclick=send;
+$("prompt").addEventListener("keydown",e=>{if(e.key==="Enter")send();});
+$("btnBattery").onclick=runBattery;
+$("btnLoad").onclick=()=>{location.reload();};
+$("tabChat").onclick=()=>{["tabChat"].forEach(t=>$(t).classList.add("primary"));$("tabBattery").classList.remove("primary");$("tabExport").classList.remove("primary");
+  $("battery").classList.add("hidden");$("export").classList.add("hidden");
+  window.scrollTo(0,0);};
+$("tabBattery").onclick=()=>{$("tabBattery").classList.add("primary");$("tabChat").classList.remove("primary");$("tabExport").classList.remove("primary");
+  $("battery").classList.remove("hidden");$("export").classList.add("hidden");$("battery").scrollIntoView({behavior:"smooth"});};
+$("tabExport").onclick=()=>{$("tabExport").classList.add("primary");$("tabChat").classList.remove("primary");$("tabBattery").classList.remove("primary");
+  $("export").classList.remove("hidden");$("battery").classList.add("hidden");$("export").scrollIntoView({behavior:"smooth"});refreshRuns();};
+init();refreshRuns();
+restoreFromHash();
+</script></body></html>
