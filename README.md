@@ -80,7 +80,11 @@ This is the interactive instrument for the measurement framework in:
   (arXiv, cs.AI) — the motivating deployment: the lab extends the
   introspection probe that the Aion agent uses on its own substrate.
 
-Code and data for both papers: [github.com/keuranos/aion-jspace](https://github.com/keuranos/aion-jspace)
+Related repositories:
+
+- [keuranos/aion-jspace](https://github.com/keuranos/aion-jspace) — code and data for both papers
+- [keuranos/agent-introspection-bench](https://github.com/keuranos/agent-introspection-bench) — mechanical self-knowledge battery (the battery channel (b) extends)
+- [keuranos/ollama-bench](https://github.com/keuranos/ollama-bench) — quality + throughput benchmarking for local Ollama models
 
 ## License
 
