@@ -86,6 +86,14 @@ Related repositories:
 - [keuranos/agent-introspection-bench](https://github.com/keuranos/agent-introspection-bench) — mechanical self-knowledge battery (the battery channel (b) extends)
 - [keuranos/ollama-bench](https://github.com/keuranos/ollama-bench) — quality + throughput benchmarking for local Ollama models
 
+## Credits
+
+The Jacobian lens at the core of this lab is fitted with Anthropic's
+[`jlens` library](https://github.com/anthropics/jacobian-lens)
+(companion code for *"Verbalizable Representations Form a Global Workspace in
+Language Models"*, Apache-2.0). All other code in this repository is the
+project's own.
+
 ## License
 
 MIT
