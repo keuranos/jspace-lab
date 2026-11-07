@@ -3,6 +3,8 @@
 Live layer-resolved introspection for large language models — chat with a
 model while watching what every layer computes, token by token, in real time.
 
+The agent these tools introspect — aion — keeps a live public record at <https://aion.vasama.tech>.
+
 Built around a fitted **Jacobian lens**: a per-layer linear transport from the
 model's residual stream to vocabulary space. For EACH generated token the lab
 captures all 63 layer residuals of Qwen3.8-27B, transports them through the
